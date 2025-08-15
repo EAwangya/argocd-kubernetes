@@ -16,7 +16,7 @@ spec:
   capacity:
     storage: 5Gi
   accessModes: ["ReadWriteOnce"]
-  persistentVolumeReclaimPolicy: Retain
+  persistentVolumeReclaimPolicy: Delete
   hostPath:
     path: /mnt/data/myappdb
 ---
@@ -30,7 +30,6 @@ spec:
     requests:
       storage: 5Gi
   volumeName: myappdb-pv
-
 
 ---
 apiVersion: apps/v1
@@ -136,12 +135,12 @@ spec:
           args:
             - |
               set -e
-              echo "Waiting for MySQL on ${DB_HOST}:${DB_PORT} …"
+              echo "⏳ Waiting for MySQL on ${DB_HOST}:${DB_PORT} …"
               for i in $(seq 1 60); do
                 nc -z "$DB_HOST" "$DB_PORT" >/dev/null 2>&1 && exit 0
                 sleep 2
               done
-              echo "MySQL not reachable"; exit 1
+              echo "❌ MySQL not reachable"; exit 1
           env:
             - name: DB_HOST
               value: myappdb
@@ -180,7 +179,7 @@ spec:
     - protocol: TCP
       port: 3000
       targetPort: myapp-port
-  type: ClusterIP
+  type: NodePort
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -201,4 +200,3 @@ spec:
                 name: myapp-service
                 port:
                   number: 3000
-
