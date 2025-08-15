@@ -19,6 +19,7 @@ spec:
   persistentVolumeReclaimPolicy: Delete
   hostPath:
     path: /mnt/data/myappdb
+
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -63,7 +64,7 @@ spec:
               mountPath: /var/lib/mysql
       containers:
         - name: myappdb
-          image: eawangya/myapp:7
+          image: eawangya/myappdb
           ports:
             - name: mysql
               containerPort: 3306
@@ -78,11 +79,10 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/mysql
-          # Probes belong on the *main* container, not the initContainer
           startupProbe:
             tcpSocket:
               port: 3306
-            failureThreshold: 30   # up to ~5 minutes @ periodSeconds 10
+            failureThreshold: 30
             periodSeconds: 10
           readinessProbe:
             tcpSocket:
@@ -135,7 +135,9 @@ spec:
           args:
             - |
               set -e
-              echo "⏳ Waiting for MySQL on ${DB_HOST}:${DB_PORT} …"
+              DB_HOST="${DB_HOST:-myappdb}"
+              DB_PORT="${DB_PORT:-3306}"
+              echo "⏳ Waiting for MySQL on $DB_HOST:$DB_PORT …"
               for i in $(seq 1 60); do
                 nc -z "$DB_HOST" "$DB_PORT" >/dev/null 2>&1 && exit 0
                 sleep 2
@@ -148,7 +150,7 @@ spec:
               value: "3306"
       containers:
         - name: myapp
-          image: eawangya/myapp:7
+          image: eawangya/myapp:latest
           imagePullPolicy: Always
           ports:
             - name: myapp-port
@@ -167,6 +169,7 @@ spec:
                   key: root-password
             - name: DB_NAME
               value: myappdb
+
 ---
 apiVersion: v1
 kind: Service
@@ -180,6 +183,7 @@ spec:
       port: 3000
       targetPort: myapp-port
   type: NodePort
+
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
