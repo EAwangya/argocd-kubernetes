@@ -64,7 +64,7 @@ spec:
               mountPath: /var/lib/mysql
       containers:
         - name: myappdb
-          image: eawangya/myappdb
+          image: eawangya/myapp:8
           ports:
             - name: mysql
               containerPort: 3306
@@ -150,7 +150,7 @@ spec:
               value: "3306"
       containers:
         - name: myapp
-          image: eawangya/myapp:latest
+          image: eawangya/myapp:8
           imagePullPolicy: Always
           ports:
             - name: myapp-port
