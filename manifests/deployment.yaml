@@ -5,7 +5,7 @@ metadata:
   name: myappdb-secret
 type: Opaque
 stringData:
-  root-password: "admin123"   # change me
+  root-password: "admin123"    # change me
 
 ---
 apiVersion: v1
@@ -135,14 +135,20 @@ spec:
           args:
             - |
               set -e
-              DB_HOST="${DB_HOST:-myappdb}"
-              DB_PORT="${DB_PORT:-3306}"
-              echo "⏳ Waiting for MySQL on $DB_HOST:$DB_PORT …"
+              echo "Checking database connectivity..."
+              # Explicitly print the environment variables to debug
+              echo "DB_HOST received: \"${DB_HOST}\""
+              echo "DB_PORT received: \"${DB_PORT}\""
+              echo "⏳ Waiting for MySQL on ${DB_HOST}:${DB_PORT} …"
               for i in $(seq 1 60); do
-                nc -z "$DB_HOST" "$DB_PORT" >/dev/null 2>&1 && exit 0
+                # Use the environment variables directly in the nc command
+                if nc -z "${DB_HOST}" "${DB_PORT}" >/dev/null 2>&1; then
+                  echo "✅ MySQL is reachable"
+                  exit 0
+                fi
                 sleep 2
               done
-              echo "❌ MySQL not reachable"; exit 1
+              echo "❌ MySQL not reachable after 120 seconds"; exit 1
           env:
             - name: DB_HOST
               value: myappdb
@@ -204,4 +210,3 @@ spec:
 #                 name: myapp-service
 #                 port:
 #                   number: 3000
-
