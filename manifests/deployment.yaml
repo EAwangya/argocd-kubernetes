@@ -5,7 +5,7 @@ metadata:
   name: myappdb-secret
 type: Opaque
 stringData:
-  root-password: "admin123"   # change me
+  root-password: "admin123"    # change me
 
 ---
 apiVersion: v1
@@ -19,6 +19,7 @@ spec:
   persistentVolumeReclaimPolicy: Delete
   hostPath:
     path: /mnt/data/myappdb
+
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -63,7 +64,7 @@ spec:
               mountPath: /var/lib/mysql
       containers:
         - name: myappdb
-          image: eawangya/myappdb
+          image: eawangya/myapp:8
           ports:
             - name: mysql
               containerPort: 3306
@@ -78,11 +79,10 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/mysql
-          # Probes belong on the *main* container, not the initContainer
           startupProbe:
             tcpSocket:
               port: 3306
-            failureThreshold: 30   # up to ~5 minutes @ periodSeconds 10
+            failureThreshold: 30
             periodSeconds: 10
           readinessProbe:
             tcpSocket:
@@ -135,12 +135,20 @@ spec:
           args:
             - |
               set -e
+              echo "Checking database connectivity..."
+              # Explicitly print the environment variables to debug
+              echo "DB_HOST received: \"${DB_HOST}\""
+              echo "DB_PORT received: \"${DB_PORT}\""
               echo "⏳ Waiting for MySQL on ${DB_HOST}:${DB_PORT} …"
               for i in $(seq 1 60); do
-                nc -z "$DB_HOST" "$DB_PORT" >/dev/null 2>&1 && exit 0
+                # Use the environment variables directly in the nc command
+                if nc -z "${DB_HOST}" "${DB_PORT}" >/dev/null 2>&1; then
+                  echo "✅ MySQL is reachable"
+                  exit 0
+                fi
                 sleep 2
               done
-              echo "❌ MySQL not reachable"; exit 1
+              echo "❌ MySQL not reachable after 120 seconds"; exit 1
           env:
             - name: DB_HOST
               value: myappdb
@@ -148,7 +156,7 @@ spec:
               value: "3306"
       containers:
         - name: myapp
-          image: eawangya/myapp:latest
+          image: eawangya/myapp:8
           imagePullPolicy: Always
           ports:
             - name: myapp-port
@@ -167,6 +175,7 @@ spec:
                   key: root-password
             - name: DB_NAME
               value: myappdb
+
 ---
 apiVersion: v1
 kind: Service
@@ -180,23 +189,24 @@ spec:
       port: 3000
       targetPort: myapp-port
   type: NodePort
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: myapp-ingress
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
-spec:
-  ingressClassName: nginx
-  rules:
-    - host: myapp.local
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: myapp-service
-                port:
-                  number: 3000
+
+# ---
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: myapp-ingress
+#   annotations:
+#     nginx.ingress.kubernetes.io/rewrite-target: /
+# spec:
+#   ingressClassName: nginx
+#   rules:
+#     - host: myapp.local
+#       http:
+#         paths:
+#           - path: /
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: myapp-service
+#                 port:
+#                   number: 3000
