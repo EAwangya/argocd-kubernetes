@@ -88,7 +88,7 @@ spec:
     spec:
       containers:
         - name: myapp
-          image: eawangya/myapp:37
+          image: eawangya/myapp:38
           imagePullPolicy: Always
           ports:
             - name: myapp-port
