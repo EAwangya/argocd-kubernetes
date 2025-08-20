@@ -25,7 +25,7 @@ spec:
         fsGroup: 999
       containers:
         - name: myappdb
-          image: eawangya/myappdb:35
+          image: eawangya/myappdb:latest
           ports:
             - name: mysql
               containerPort: 3306
